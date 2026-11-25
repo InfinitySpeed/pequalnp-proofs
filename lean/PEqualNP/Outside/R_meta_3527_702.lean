@@ -337,8 +337,9 @@ theorem PEqualNP.Outside.R_meta_3527_702
             exact hPres1 z i hi
           · intro z
             rw [wireVal_append_gate_self]
-            simp only [List.map, GateOp.eval, List.any_cons]
-            rw [hPres1 z u hu_lt, hVal1 z]
+            have evalOr2 (a b : Bool) : GateOp.or.eval [a, b] = (a || b) := by cases a <;> cases b <;> rfl
+            simp only [List.map]
+            rw [evalOr2, hPres1 z u hu_lt, hVal1 z]
             simp
 
     have addOrTop {x1 x2 : ℕ} (ws : List ℕ) (hne : ws ≠ []) :
@@ -379,19 +380,20 @@ theorem PEqualNP.Outside.R_meta_3527_702
             exact hPres1 z i hi
           · intro z
             rw [wireVal_append_gate_self]
-            simp only [List.map, GateOp.eval, List.any_cons]
-            rw [hPres1 z u hu_lt, hVal1 z]
+            have evalOr2 (a b : Bool) : GateOp.or.eval [a, b] = (a || b) := by cases a <;> cases b <;> rfl
+            simp only [List.map]
+            rw [evalOr2, hPres1 z u hu_lt, hVal1 z]
             simp
 
     let Star (x1 x2 : ℕ) := (Fin x1 × List (Fin x2)) ⊕ (Fin x2 × List (Fin x1))
 
-    let starSize {x1 x2 : ℕ} : Star x1 x2 → ℕ
-      | Sum.inl (_, ls) => ls.length
-      | Sum.inr (_, ps) => ps.length
+    let starSize {x1 x2 : ℕ} : Star x1 x2 → ℕ :=
+      Sum.elim (fun p => p.2.length) (fun p => p.2.length)
 
-    let starEval {x1 x2 : ℕ} (z : Fin (x1 + x2) → Bool) : Star x1 x2 → Bool
-      | Sum.inl (p, ls) => z (Fin.castAdd x2 p) && ls.any (fun l => z (Fin.natAdd x1 l))
-      | Sum.inr (l, ps) => ps.any (fun p => z (Fin.castAdd x2 p)) && z (Fin.natAdd x1 l)
+    let starEval {x1 x2 : ℕ} (z : Fin (x1 + x2) → Bool) : Star x1 x2 → Bool :=
+      Sum.elim
+        (fun p => z (Fin.castAdd x2 p.1) && p.2.any (fun l => z (Fin.natAdd x1 l)))
+        (fun p => p.2.any (fun q => z (Fin.castAdd x2 q)) && z (Fin.natAdd x1 p.1))
 
     have wireVal_input_left {x1 x2 : ℕ} (gs : List Gate) (z : Fin (x1 + x2) → Bool)
         (p : Fin x1) :
@@ -452,8 +454,8 @@ theorem PEqualNP.Outside.R_meta_3527_702
         have hG2 : Good x1 x2 S1 gs2 := good_append_and hG1 false hp1 hwL
         refine ⟨S1, gs2, w, ?_, hG2, hSub1, ?_, ?_, ?_⟩
         · simp only [gs2, List.length_append, List.length_singleton, hlen1, ws, List.length_map,
-            starSize]
-          have : 0 < ls.length := by simpa [starSize] using hpos
+            starSize, Sum.elim_inl]
+          have : 0 < ls.length := by simpa [starSize, Sum.elim_inl] using hpos
           omega
         · simp [gs2, w]
         · intro z i hi
@@ -462,8 +464,9 @@ theorem PEqualNP.Outside.R_meta_3527_702
           exact hPres1 z i hi
         · intro z
           rw [wireVal_append_gate_self]
-          simp only [List.map, GateOp.eval, starEval]
-          rw [wireVal_input_left, hVal1 z]
+          have evalAnd2 (a b : Bool) : GateOp.and.eval [a, b] = (a && b) := by cases a <;> cases b <;> rfl
+          simp only [List.map, starEval, Sum.elim_inl]
+          rw [evalAnd2, wireVal_input_left, hVal1 z]
           simp only [ws, List.any_map]
           have hfn : (fun l : Fin x2 => wireVal (x1 + x2) gs z (x1 + l.1)) =
               (fun l : Fin x2 => z (Fin.natAdd x1 l)) := by
@@ -490,8 +493,8 @@ theorem PEqualNP.Outside.R_meta_3527_702
         have hG2 : Good x1 x2 S1 gs2 := good_append_and hG1 false hwP hl1
         refine ⟨S1, gs2, w, ?_, hG2, hSub1, ?_, ?_, ?_⟩
         · simp only [gs2, List.length_append, List.length_singleton, hlen1, ws, List.length_map,
-            starSize]
-          have : 0 < ps.length := by simpa [starSize] using hpos
+            starSize, Sum.elim_inr]
+          have : 0 < ps.length := by simpa [starSize, Sum.elim_inr] using hpos
           omega
         · simp [gs2, w]
         · intro z i hi
@@ -500,8 +503,9 @@ theorem PEqualNP.Outside.R_meta_3527_702
           exact hPres1 z i hi
         · intro z
           rw [wireVal_append_gate_self]
-          simp only [List.map, GateOp.eval, starEval]
-          rw [wireVal_input_right, hVal1 z]
+          have evalAnd2 (a b : Bool) : GateOp.and.eval [a, b] = (a && b) := by cases a <;> cases b <;> rfl
+          simp only [List.map, starEval, Sum.elim_inr]
+          rw [evalAnd2, wireVal_input_right, hVal1 z]
           simp only [ws, List.any_map]
           have hfn : (fun p : Fin x1 => wireVal (x1 + x2) gs z p.1) =
               (fun p : Fin x1 => z (Fin.castAdd x2 p)) := by
@@ -603,14 +607,14 @@ theorem PEqualNP.Outside.R_meta_3527_702
           · intro g hg; cases hg
           · intro j hj; simp at hj
           · intro g hg; cases hg
-        · simp [PEqualNP.CircuitLowerBounds.Circuit.size]
+        · change (0 : ℕ) ≤ 0 + A.card + B.card - 1; omega
         · intro z
-          simp only [PEqualNP.MetaComplexity.circuitFun, PEqualNP.CircuitLowerBounds.Circuit.eval,
-            PEqualNP.CircuitLowerBounds.Circuit.wires, List.foldl_nil, Finset.notMem_empty,
-            false_and, exists_false, decide_false]
-          exact getD_of_ge (List.ofFn z) (x1 + x2) (by simp)
+          change (List.foldl (fun (w : List Bool) (g : PEqualNP.CircuitLowerBounds.Gate) => w ++ [g.op.eval (g.inputs.map fun i => w.getD i false)]) (List.ofFn z) []).getD (x1 + x2) false =
+            decide (∃ x10 x11, (x10, x11) ∈ (∅ : Finset (Fin x1 × Fin x2)) ∧ z (Fin.castAdd x2 x10) = true ∧ z (Fin.natAdd x1 x11) = true)
+          rw [List.foldl_nil, getD_of_ge (List.ofFn z) (x1 + x2) (by simp)]
+          simp
         · intro b w hw; simp at hw
-        · intro j hj; simp [PEqualNP.CircuitLowerBounds.Circuit.size] at hj
+        · intro j hj; change j < 0 at hj; omega
       · have hE_ne : E.Nonempty := Finset.nonempty_iff_ne_empty.mpr hE
         let NA : Fin x1 → Finset (Fin x2) := fun p => Finset.univ.filter (fun l => (p, l) ∈ E)
         let NB : Fin x2 → Finset (Fin x1) := fun l => Finset.univ.filter (fun p => (p, l) ∈ E ∧ p ∉ A)
@@ -623,9 +627,9 @@ theorem PEqualNP.Outside.R_meta_3527_702
           intro st hst
           simp only [stars, starsA, starsB, List.mem_append, List.mem_map, Finset.mem_toList] at hst
           rcases hst with ⟨p, hp, rfl⟩ | ⟨l, hl, rfl⟩
-          · simp only [starSize, Finset.length_toList]
+          · simp only [starSize, Sum.elim_inl, Finset.length_toList]
             exact Finset.card_pos.mpr (Finset.mem_filter.mp hp).2
-          · simp only [starSize, Finset.length_toList]
+          · simp only [starSize, Sum.elim_inr, Finset.length_toList]
             exact Finset.card_pos.mpr (Finset.mem_filter.mp hl).2
         have hsumA : (starsA.map starSize).sum = ∑ p ∈ A', (NA p).card := by
           have h1 : (starsA.map starSize) = A'.toList.map (fun p => (NA p).card) := by
@@ -724,8 +728,8 @@ theorem PEqualNP.Outside.R_meta_3527_702
             cases ws1 with
             | nil => exact absurd rfl hws1_ne
             | cons _ _ => simp
-          simp only [C, PEqualNP.CircuitLowerBounds.Circuit.size, hlen2, hlen1, List.length_nil,
-            Nat.zero_add, hsum_stars, hwslen1, hstars_len]
+          have hCsize : C.size = gs2.length := rfl
+          rw [hCsize, hlen2, hlen1, List.length_nil, Nat.zero_add, hsum_stars, hwslen1, hstars_len]
           omega
         · intro z
           have hcf : PEqualNP.MetaComplexity.circuitFun (x1 + x2) C z = wireVal (x1 + x2) gs2 z wOut := rfl
@@ -736,10 +740,10 @@ theorem PEqualNP.Outside.R_meta_3527_702
           · rintro ⟨st, hst, hst_eval⟩
             simp only [stars, starsA, starsB, List.mem_append, List.mem_map, Finset.mem_toList] at hst
             rcases hst with ⟨p, _, rfl⟩ | ⟨l, _, rfl⟩
-            · simp only [starEval, Bool.and_eq_true, List.any_eq_true, Finset.mem_toList] at hst_eval
+            · simp only [starEval, Sum.elim_inl, Bool.and_eq_true, List.any_eq_true, Finset.mem_toList] at hst_eval
               rcases hst_eval with ⟨hzp, l, hl, hzl⟩
               exact ⟨p, l, (Finset.mem_filter.mp hl).2, hzp, hzl⟩
-            · simp only [starEval, Bool.and_eq_true, List.any_eq_true, Finset.mem_toList] at hst_eval
+            · simp only [starEval, Sum.elim_inr, Bool.and_eq_true, List.any_eq_true, Finset.mem_toList] at hst_eval
               rcases hst_eval with ⟨⟨p, hp, hzp⟩, hzl⟩
               exact ⟨p, l, (Finset.mem_filter.mp hp).2.1, hzp, hzl⟩
           · rintro ⟨p, l, hpl, hzp, hzl⟩
@@ -748,14 +752,14 @@ theorem PEqualNP.Outside.R_meta_3527_702
               · simp only [stars, starsA, List.mem_append, List.mem_map, Finset.mem_toList]
                 left
                 exact ⟨p, Finset.mem_filter.mpr ⟨hpA, ⟨l, Finset.mem_filter.mpr ⟨Finset.mem_univ l, hpl⟩⟩⟩, rfl⟩
-              · simp only [starEval, Bool.and_eq_true, List.any_eq_true, Finset.mem_toList]
+              · simp only [starEval, Sum.elim_inl, Bool.and_eq_true, List.any_eq_true, Finset.mem_toList]
                 exact ⟨hzp, l, Finset.mem_filter.mpr ⟨Finset.mem_univ l, hpl⟩, hzl⟩
             · have hlB : l ∈ B := (hcov (p, l) hpl).resolve_left hpA
               refine ⟨Sum.inr (l, (NB l).toList), ?_, ?_⟩
               · simp only [stars, starsB, List.mem_append, List.mem_map, Finset.mem_toList]
                 right
                 exact ⟨l, Finset.mem_filter.mpr ⟨hlB, ⟨p, Finset.mem_filter.mpr ⟨Finset.mem_univ p, hpl, hpA⟩⟩⟩, rfl⟩
-              · simp only [starEval, Bool.and_eq_true, List.any_eq_true, Finset.mem_toList]
+              · simp only [starEval, Sum.elim_inr, Bool.and_eq_true, List.any_eq_true, Finset.mem_toList]
                 exact ⟨⟨p, Finset.mem_filter.mpr ⟨Finset.mem_univ p, hpl, hpA⟩, hzp⟩, hzl⟩
     intro n m E T hcov
     let A : Finset (Fin n) := Finset.univ.filter fun p => Fin.castAdd m p ∈ T
